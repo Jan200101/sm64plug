@@ -9,27 +9,11 @@
 #include "configfile.h"
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
-
-enum ConfigOptionType {
-    CONFIG_TYPE_BOOL,
-    CONFIG_TYPE_UINT,
-    CONFIG_TYPE_FLOAT,
-};
-
-struct ConfigOption {
-    const char *name;
-    enum ConfigOptionType type;
-    union {
-        bool *boolValue;
-        unsigned int *uintValue;
-        float *floatValue;
-    };
-};
-
 /*
  *Config options and default values
  */
 bool configFullscreen            = false;
+char configPluginDir[PATH_MAX]   = "plugins";
 // Keyboard mappings (scancode values)
 unsigned int configKeyA          = 0x26;
 unsigned int configKeyB          = 0x33;
@@ -46,22 +30,27 @@ unsigned int configKeyStickLeft  = 0x1E;
 unsigned int configKeyStickRight = 0x20;
 
 
-static const struct ConfigOption options[] = {
-    {.name = "fullscreen",     .type = CONFIG_TYPE_BOOL, .boolValue = &configFullscreen},
-    {.name = "key_a",          .type = CONFIG_TYPE_UINT, .uintValue = &configKeyA},
-    {.name = "key_b",          .type = CONFIG_TYPE_UINT, .uintValue = &configKeyB},
-    {.name = "key_start",      .type = CONFIG_TYPE_UINT, .uintValue = &configKeyStart},
-    {.name = "key_r",          .type = CONFIG_TYPE_UINT, .uintValue = &configKeyR},
-    {.name = "key_z",          .type = CONFIG_TYPE_UINT, .uintValue = &configKeyZ},
-    {.name = "key_cup",        .type = CONFIG_TYPE_UINT, .uintValue = &configKeyCUp},
-    {.name = "key_cdown",      .type = CONFIG_TYPE_UINT, .uintValue = &configKeyCDown},
-    {.name = "key_cleft",      .type = CONFIG_TYPE_UINT, .uintValue = &configKeyCLeft},
-    {.name = "key_cright",     .type = CONFIG_TYPE_UINT, .uintValue = &configKeyCRight},
-    {.name = "key_stickup",    .type = CONFIG_TYPE_UINT, .uintValue = &configKeyStickUp},
-    {.name = "key_stickdown",  .type = CONFIG_TYPE_UINT, .uintValue = &configKeyStickDown},
-    {.name = "key_stickleft",  .type = CONFIG_TYPE_UINT, .uintValue = &configKeyStickLeft},
-    {.name = "key_stickright", .type = CONFIG_TYPE_UINT, .uintValue = &configKeyStickRight},
+static const struct ConfigOption default_options[] = {
+    {.name = "fullscreen",       .type = CONFIG_TYPE_BOOL,   .boolValue   = &configFullscreen},
+    {.name = "plugin_directory", .type = CONFIG_TYPE_STRING, .stringValue = &configPluginDir},
+    {.name = "key_a",            .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyA},
+    {.name = "key_b",            .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyB},
+    {.name = "key_start",        .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyStart},
+    {.name = "key_r",            .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyR},
+    {.name = "key_z",            .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyZ},
+    {.name = "key_cup",          .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyCUp},
+    {.name = "key_cdown",        .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyCDown},
+    {.name = "key_cleft",        .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyCLeft},
+    {.name = "key_cright",       .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyCRight},
+    {.name = "key_stickup",      .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyStickUp},
+    {.name = "key_stickdown" ,   .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyStickDown},
+    {.name = "key_stickleft",    .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyStickLeft},
+    {.name = "key_stickright",   .type = CONFIG_TYPE_UINT,   .uintValue   = &configKeyStickRight},
 };
+
+struct ConfigOption* options;
+
+int options_size = ARRAY_LEN(default_options);
 
 // Reads an entire line from a file (excluding the newline character) and returns an allocated string
 // Returns NULL if no lines could be read from the file
@@ -138,6 +127,20 @@ static unsigned int tokenize_string(char *str, int maxTokens, char **tokens) {
     return count;
 }
 
+void init_options()
+{
+    size_t size = (sizeof(struct ConfigOption) * options_size);
+
+    options = malloc(size);
+    memcpy(options, default_options, size);
+
+}
+
+void uninit_options()
+{
+    free(options);
+}
+
 // Loads the config file specified by 'filename'
 void configfile_load(const char *filename) {
     FILE *file;
@@ -166,7 +169,7 @@ void configfile_load(const char *filename) {
             if (numTokens == 2) {
                 const struct ConfigOption *option = NULL;
 
-                for (unsigned int i = 0; i < ARRAY_LEN(options); i++) {
+                for (unsigned int i = 0; i < options_size; i++) {
                     if (strcmp(tokens[0], options[i].name) == 0) {
                         option = &options[i];
                         break;
@@ -187,6 +190,9 @@ void configfile_load(const char *filename) {
                             break;
                         case CONFIG_TYPE_FLOAT:
                             sscanf(tokens[1], "%f", option->floatValue);
+                            break;
+                        case CONFIG_TYPE_STRING:
+                            sscanf(tokens[1], "%s", option->stringValue);
                             break;
                         default:
                             assert(0); // bad type
@@ -214,7 +220,7 @@ void configfile_save(const char *filename) {
         return;
     }
 
-    for (unsigned int i = 0; i < ARRAY_LEN(options); i++) {
+    for (unsigned int i = 0; i < options_size; i++) {
         const struct ConfigOption *option = &options[i];
 
         switch (option->type) {
@@ -226,6 +232,9 @@ void configfile_save(const char *filename) {
                 break;
             case CONFIG_TYPE_FLOAT:
                 fprintf(file, "%s %f\n", option->name, *option->floatValue);
+                break;
+            case CONFIG_TYPE_STRING:
+                fprintf(file, "%s %s\n", option->name, option->stringValue);
                 break;
             default:
                 assert(0); // unknown type

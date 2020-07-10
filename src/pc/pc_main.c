@@ -29,6 +29,8 @@
 
 #include "configfile.h"
 
+#include "plugins.h"
+
 #define CONFIG_FILE "sm64config.txt"
 
 OSMesg D_80339BEC;
@@ -129,8 +131,10 @@ static void on_anim_frame(double time) {
 }
 #endif
 
-static void save_config(void) {
+static void game_exit(void) {
     configfile_save(CONFIG_FILE);
+    unload_plugins();
+    uninit_options();
 }
 
 static void on_fullscreen_changed(bool is_now_fullscreen) {
@@ -142,8 +146,10 @@ void main_func(void) {
     main_pool_init(pool, pool + sizeof(pool) / sizeof(pool[0]));
     gEffectsMemoryPool = mem_pool_init(0x4000, MEMORY_POOL_LEFT);
 
+    init_options();
+    load_plugins();
     configfile_load(CONFIG_FILE);
-    atexit(save_config);
+    atexit(game_exit);
 
 #ifdef TARGET_WEB
     emscripten_set_main_loop(em_main_loop, 0, 0);

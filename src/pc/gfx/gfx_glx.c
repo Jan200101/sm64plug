@@ -398,6 +398,7 @@ static void gfx_glx_set_keyboard_callbacks(bool (*on_key_down)(int scancode), bo
 static void gfx_glx_main_loop(void (*run_one_game_iter)(void)) {
     while (1) {
         run_one_game_iter();
+        run_functions();
     }
 }
 
