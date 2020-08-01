@@ -9,12 +9,12 @@ void loop_func()
 
 void init_func()
 {
-	//printf("I get called when loaded\n");
+	printf("I get called when loaded\n");
 
 	add_function(loop_func);
 }
 
 void deinit_func()
 {
-	//printf("I get called when unloaded\n");
+	printf("I get called when unloaded\n");
 }

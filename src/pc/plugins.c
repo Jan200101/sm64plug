@@ -54,17 +54,17 @@ void load_plugins() {
 
                 if (init_func)
                 {
-                    printf("[plugins] loaded \"%s\"\n", ent->d_name);
+                    printf("[plugins] loaded `%s'\n", ent->d_name);
                     init_func();
                 }
                 else
                 {
-                    printf("[plugins] plugin \"%s\" has no init function\n", ent->d_name);
+                    printf("[plugins] plugin `%s' has no init function\n", ent->d_name);
                 }
             }
             else
             {
-                printf("[plugins] unable to load \"%s\": %s\n", ent->d_name, dlerror());
+                printf("[plugins] unable to load `%s': %s\n", ent->d_name, dlerror());
             }
 
 

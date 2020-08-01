@@ -445,7 +445,7 @@ SDLCONFIG := $(CROSS)sdl2-config
 # Platform-specific compiler and linker flags
 ifeq ($(TARGET_WINDOWS),1)
   PLATFORM_CFLAGS  := -DTARGET_WINDOWS
-  PLATFORM_LDFLAGS := -lm -lxinput9_1_0 -lole32 -no-pie -mwindows
+  PLATFORM_LDFLAGS := -lm -lxinput9_1_0 -lole32 -no-pie -mwindows -Wl,--export-all-symbols,--out-implib,plugin_src/lib$(TARGET).a
 endif
 ifeq ($(TARGET_LINUX),1)
   PLATFORM_CFLAGS  := -DTARGET_LINUX `$(PKGCONFIG) --cflags libusb-1.0`
@@ -537,7 +537,7 @@ all: $(EXE)
 endif
 
 clean:
-	$(RM) -r $(BUILD_DIR_BASE)
+	$(RM) -r $(BUILD_DIR_BASE) plugin_src/lib$(TARGET).a
 
 distclean:
 	$(RM) -r $(BUILD_DIR_BASE)
@@ -825,8 +825,11 @@ endif
 plugins:
 	mkdir -p $@
 
-plugin-%: plugins
-	make -C plugin_src/$*/ TARGET_LINUX=${TARGET_LINUX} TARGET_WINDOWS=${TARGET_WINDOWS} CROSS=$(CROSS)
+plugin-%: plugins $(EXE)
+	make -e -C plugin_src/$*/ TARGET=${TARGET} CROSS=${CROSS} TARGET_LINUX=${TARGET_LINUX} TARGET_WINDOWS=${TARGET_WINDOWS}
+
+clean-plugins:
+	rm -rf plugins/*
 
 .PHONY: all clean distclean default diff test load libultra plugins-*
 # with no prerequisites, .SECONDARY causes no intermediate target to be removed
